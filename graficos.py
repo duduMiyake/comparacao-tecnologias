@@ -12,10 +12,13 @@ files = {
     "1000-REST": "1000-REST.csv",
     "10-GraphQL": "10-Graphql.csv",
     "100-GraphQL": "100-Graphql.csv",
-    "1000-GraphQL": "1000-Graphql.csv"
+    "1000-GraphQL": "1000-Graphql.csv",
+    "10-SOAP": "10-SOAP.csv",
+    "100-SOAP": "100-SOAP.csv",
+    "1000-SOAP": "1000-SOAP.csv"
 }
 
-# Filtrando as requisições REST e GraphQL
+# Filtrando as requisições REST, GraphQL e SOAP
 rest_queries = [
     "GET /usuarios",
     "GET /musicas",
@@ -32,10 +35,16 @@ graphql_queries = [
     "GraphQL: Usuarios"
 ]
 
+soap_queries = [
+    "SOAP - listarMusicas",
+    "SOAP - listarUsuarios"
+]
+
 # Dicionário para armazenar os tempos médios de resposta
 response_times = {
     "REST": {},
-    "GraphQL": {}
+    "GraphQL": {},
+    "SOAP": {}
 }
 
 # Função para calcular o tempo médio de resposta
@@ -47,16 +56,27 @@ def calculate_avg_response_time(df, queries):
 for file_name, file_path in files.items():
     df = pd.read_csv(file_path)
     
-    # Verificar se o arquivo é REST ou GraphQL
+    # Verificar se o arquivo é REST, GraphQL ou SOAP
     if "REST" in file_name:
         key = "REST"
-    else:
+        queries = rest_queries
+    elif "GraphQL" in file_name:
         key = "GraphQL"
+        queries = graphql_queries
+    else:
+        key = "SOAP"
+        queries = soap_queries
+        print(f"Processando {file_name}")
+        print("Consultas encontradas no CSV:", df['Name'].unique())  # Debugging
     
     user_count = file_name.split('-')[0]
     
     # Calcular o tempo médio de resposta para as requisições
-    avg_response_time = calculate_avg_response_time(df, rest_queries if key == "REST" else graphql_queries)
+    avg_response_time = calculate_avg_response_time(df, queries)
+    
+    # Garantir que valores inválidos não causem problemas
+    if pd.isna(avg_response_time):
+        avg_response_time = 0  # Substitua por um valor padrão adequado, se necessário
     
     # Armazenar o resultado no dicionário
     if user_count not in response_times[key]:
@@ -67,24 +87,32 @@ for file_name, file_path in files.items():
 # Preparar os dados para o gráfico
 rest_avg_times = [response_times["REST"][str(num)][0] for num in [10, 100, 1000]]
 graphql_avg_times = [response_times["GraphQL"][str(num)][0] for num in [10, 100, 1000]]
+soap_avg_times = [response_times["SOAP"][str(num)][0] for num in [10, 100, 1000]]
+
+# Verificar os valores calculados
+print("Tempos Médios Calculados:")
+print(f"REST: {rest_avg_times}")
+print(f"GraphQL: {graphql_avg_times}")
+print(f"SOAP: {soap_avg_times}")
 
 # Configurar o gráfico
-bar_width = 0.35
+bar_width = 0.25
 x = range(len([10, 100, 1000]))  # Número de usuários
 
 # Plotar os dados
 plt.bar(x, rest_avg_times, bar_width, label="REST", color='blue')
 plt.bar([i + bar_width for i in x], graphql_avg_times, bar_width, label="GraphQL", color='green')
+plt.bar([i + 2 * bar_width for i in x], soap_avg_times, bar_width, label="SOAP", color='orange')
 
-# Adicionar título e labels
-plt.title('Comparação de Tempo de Resposta Médio entre REST e GraphQL')
+# Ajustar as posições no eixo X
+plt.xticks([i + bar_width for i in x], ['10', '100', '1000'])
+
+# Adicionar título e legendas
+plt.title('Comparação de Tempo de Resposta Médio entre REST, GraphQL e SOAP')
 plt.xlabel('Número de Usuários')
 plt.ylabel('Tempo Médio de Resposta (ms)')
-plt.xticks([i + bar_width / 2 for i in x], ['10', '100', '1000'])
 plt.legend()
 
-# Salvar o gráfico em um arquivo PNG
+# Salvar o gráfico
 plt.savefig("grafico_comparacao.png")
-
-# Exibir uma mensagem indicando que o gráfico foi salvo
 print("O gráfico foi salvo como 'grafico_comparacao.png'.")
